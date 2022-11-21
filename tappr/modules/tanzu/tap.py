@@ -380,6 +380,7 @@ class TanzuApplicationPlatform:
         if exit_code != 0:
             raise typer.Exit(-1)
 
+        self.logger.msg("f:sunglasses: I am recognized")
         dev_yaml_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/rbac/secret.yml"
         hash_str = str(time.time())
         tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
