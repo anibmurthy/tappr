@@ -153,3 +153,25 @@ roleRef:
   kind: ClusterRole
   name: k8s-reader
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: registry-tls-secret
+  namespace: {$$namespace}
+spec:
+  fromNamespace: tap-source-storage
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+ name: read-secrets
+ namespace: {$$namespace}
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {$$namespace}
+roleRef:
+ kind: ClusterRole
+ name: oci-role
+ apiGroup: rbac.authorization.k8s.io
