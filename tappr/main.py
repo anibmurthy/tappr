@@ -732,12 +732,14 @@ def install(
 @tap_app.command()
 def setup(
     namespace: str = typer.Option("default", help="Developer namespace to setup"),
+    quiet: bool = typer.Option(False, help="Create plain developer namespace without any additional resources"),
+
 ):
     """
     Setup Developer Namespace.
 
     """
-    tap_helpers.developer_ns_setup(namespace=namespace)
+    tap_helpers.developer_ns_setup(namespace=namespace, quiet=quiet)
 
 
 @tap_app.command()

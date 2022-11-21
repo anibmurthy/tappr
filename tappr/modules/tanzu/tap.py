@@ -351,7 +351,7 @@ class TanzuApplicationPlatform:
             self.logger.msg(":broken_heart: Unable to Install TAP. Use [bold]--verbose[/bold] flag for error details.")
             raise typer.Exit(-1)
 
-    def developer_ns_setup(self, namespace, install_ns="tap-install"):
+    def developer_ns_setup(self, namespace, install_ns="tap-install", quiet=False):
         k8s_context = commons.check_and_pick_k8s_context(k8s_context=None, k8s_helper=self.k8s_helper, logger=self.logger, ui_helper=self.ui_helper, state=self.state)
         ns_list = commons.get_ns_list(k8s_helper=self.k8s_helper, client=self.k8s_helper.core_clients[k8s_context])
         if namespace not in ns_list:
@@ -389,79 +389,80 @@ class TanzuApplicationPlatform:
         if exit_code != 0:
             raise typer.Exit(-1)
 
-        if_add_test_template = self.logger.confirm(":test_tube: Do you want to add a test pipeline?", default=False)
-        if if_add_test_template:
-            # {$$testTaskImage}
-            test_image = self.logger.question(":test_tube: What base image do you want to use for test task? (e.g. gradle, golang, python etc.)", default="gradle")
-            # {$$testTaskCmd}
-            test_cmd = self.logger.question(":test_tube: Enter test command for running your tests (e.g. [cyan]./mvnw test[/cyan], [cyan]go test -v ./...[/cyan] etc.)", default="./mvnw test")
+        if not quiet:
+            if_add_test_template = self.logger.confirm(":test_tube: Do you want to add a test pipeline?", default=False)
+            if if_add_test_template:
+                # {$$testTaskImage}
+                test_image = self.logger.question(":test_tube: What base image do you want to use for test task? (e.g. gradle, golang, python etc.)", default="gradle")
+                # {$$testTaskCmd}
+                test_cmd = self.logger.question(":test_tube: Enter test command for running your tests (e.g. [cyan]./mvnw test[/cyan], [cyan]go test -v ./...[/cyan] etc.)", default="./mvnw test")
 
-            template_base_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/templates/test-pipeline.yml"
-            hash_str = str(time.time())
-            tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
-            open(tmp_dir, "w").write(open(template_base_path, "r").read().replace("{$$testTaskImage}", test_image).replace("{$$testTaskCmd}", test_cmd))
-            exit_code = self.sh_call(
-                cmd=f"kubectl -n {namespace} apply -f {tmp_dir}",
-                msg=f":sunglasses: Setting up test pipeline in namespace {namespace}",
-                spinner_msg="Finalizing",
-                error_msg=":broken_heart: Unable to add tekton test pipeline to namespace. Use [bold]--verbose[/bold] flag for error details.",
-            )
-            if exit_code != 0:
-                raise typer.Exit(-1)
+                template_base_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/templates/test-pipeline.yml"
+                hash_str = str(time.time())
+                tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
+                open(tmp_dir, "w").write(open(template_base_path, "r").read().replace("{$$testTaskImage}", test_image).replace("{$$testTaskCmd}", test_cmd))
+                exit_code = self.sh_call(
+                    cmd=f"kubectl -n {namespace} apply -f {tmp_dir}",
+                    msg=f":sunglasses: Setting up test pipeline in namespace {namespace}",
+                    spinner_msg="Finalizing",
+                    error_msg=":broken_heart: Unable to add tekton test pipeline to namespace. Use [bold]--verbose[/bold] flag for error details.",
+                )
+                if exit_code != 0:
+                    raise typer.Exit(-1)
 
-        if_add_scan_template = self.logger.confirm(":magnifying_glass_tilted_left: Do you want to add a scan policy?", default=False)
-        if if_add_scan_template:
-            # {$$notAllowedSeverities}
-            not_allowed_levels = self.logger.question(
-                ':magnifying_glass_tilted_left: What vuln levels are not allowed? (Comma separated list e.g. [cyan]["Critical", "High"][/cyan] etc.)', default="[]"
-            )
-            try:
-                json.loads(not_allowed_levels)
-            except Exception:
-                self.logger.msg(f":broken_heart: Unable to parse the input. Make sure it's a comma separated list.")
-                raise typer.Exit(-1)
+            if_add_scan_template = self.logger.confirm(":magnifying_glass_tilted_left: Do you want to add a scan policy?", default=False)
+            if if_add_scan_template:
+                # {$$notAllowedSeverities}
+                not_allowed_levels = self.logger.question(
+                    ':magnifying_glass_tilted_left: What vuln levels are not allowed? (Comma separated list e.g. [cyan]["Critical", "High"][/cyan] etc.)', default="[]"
+                )
+                try:
+                    json.loads(not_allowed_levels)
+                except Exception:
+                    self.logger.msg(f":broken_heart: Unable to parse the input. Make sure it's a comma separated list.")
+                    raise typer.Exit(-1)
 
-            template_base_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/templates/scan-policy.yml"
-            hash_str = str(time.time())
-            tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
-            open(tmp_dir, "w").write(open(template_base_path, "r").read().replace("{$$notAllowedSeverities}", f" notAllowedSeverities := {not_allowed_levels}"))
-            exit_code = self.sh_call(
-                cmd=f"kubectl -n {namespace} apply -f {tmp_dir}",
-                msg=f":sunglasses: Setting up scan policy in namespace {namespace}",
-                spinner_msg="Finalizing",
-                error_msg=":broken_heart: Unable to add scan policy to namespace. Use [bold]--verbose[/bold] flag for error details.",
-            )
-            if exit_code != 0:
-                raise typer.Exit(-1)
+                template_base_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/templates/scan-policy.yml"
+                hash_str = str(time.time())
+                tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
+                open(tmp_dir, "w").write(open(template_base_path, "r").read().replace("{$$notAllowedSeverities}", f" notAllowedSeverities := {not_allowed_levels}"))
+                exit_code = self.sh_call(
+                    cmd=f"kubectl -n {namespace} apply -f {tmp_dir}",
+                    msg=f":sunglasses: Setting up scan policy in namespace {namespace}",
+                    spinner_msg="Finalizing",
+                    error_msg=":broken_heart: Unable to add scan policy to namespace. Use [bold]--verbose[/bold] flag for error details.",
+                )
+                if exit_code != 0:
+                    raise typer.Exit(-1)
 
-            # Check if grype is installed
-            k8s_context = commons.check_and_pick_k8s_context(k8s_context=None, k8s_helper=self.k8s_helper, logger=self.logger, ui_helper=self.ui_helper, state=self.state)
-            success, response = self.k8s_helper.list_namespaced_custom_objects(
-                group="packaging.carvel.dev",
-                version="v1alpha1",
-                namespace=install_ns,
-                plural="packageinstalls",
-                client=self.k8s_helper.custom_clients[k8s_context],
-            )
-            for item in response["items"]:
-                if "status" in item:
-                    if item["status"]["conditions"][0]["type"] == "ReconcileSucceeded" and item["metadata"]["name"] == "grype":
-                        grype_version = item["status"]["version"]
-                        self.logger.debug(f":package: Grype {grype_version} package detected. Installing grype in namespace {namespace}")
+                # Check if grype is installed
+                k8s_context = commons.check_and_pick_k8s_context(k8s_context=None, k8s_helper=self.k8s_helper, logger=self.logger, ui_helper=self.ui_helper, state=self.state)
+                success, response = self.k8s_helper.list_namespaced_custom_objects(
+                    group="packaging.carvel.dev",
+                    version="v1alpha1",
+                    namespace=install_ns,
+                    plural="packageinstalls",
+                    client=self.k8s_helper.custom_clients[k8s_context],
+                )
+                for item in response["items"]:
+                    if "status" in item:
+                        if item["status"]["conditions"][0]["type"] == "ReconcileSucceeded" and item["metadata"]["name"] == "grype":
+                            grype_version = item["status"]["version"]
+                            self.logger.debug(f":package: Grype {grype_version} package detected. Installing grype in namespace {namespace}")
 
-                        hash_str = str(time.time())
-                        tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
-                        # TODO: replace registry-credentials with the secret that was in the values file for grype.
-                        # TODO: This might not work for people using custom tap-values.yaml file.
-                        open(tmp_dir, "w").write(f"namespace: {namespace}\ntargetImagePullSecret: registry-credentials")
-                        exit_code = self.sh_call(
-                            cmd=f"tanzu package install grype-scanner-{namespace} --package-name grype.scanning.apps.tanzu.vmware.com --version {grype_version} --namespace {install_ns} --values-file {tmp_dir} ",
-                            msg=f":sunglasses: Installing grype scanner in namespace {namespace}",
-                            spinner_msg="Finalizing",
-                            error_msg=":broken_heart: Unable to install grype scanner. Use [bold]--verbose[/bold] flag for error details.",
-                        )
-                        if exit_code != 0:
-                            raise typer.Exit(-1)
+                            hash_str = str(time.time())
+                            tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
+                            # TODO: replace registry-credentials with the secret that was in the values file for grype.
+                            # TODO: This might not work for people using custom tap-values.yaml file.
+                            open(tmp_dir, "w").write(f"namespace: {namespace}\ntargetImagePullSecret: registry-credentials")
+                            exit_code = self.sh_call(
+                                cmd=f"tanzu package install grype-scanner-{namespace} --package-name grype.scanning.apps.tanzu.vmware.com --version {grype_version} --namespace {install_ns} --values-file {tmp_dir} ",
+                                msg=f":sunglasses: Installing grype scanner in namespace {namespace}",
+                                spinner_msg="Finalizing",
+                                error_msg=":broken_heart: Unable to install grype scanner. Use [bold]--verbose[/bold] flag for error details.",
+                            )
+                            if exit_code != 0:
+                                raise typer.Exit(-1)
 
     def ingress_ip(self, service: str, namespace: str):
         k8s_context = commons.check_and_pick_k8s_context(k8s_context=None, k8s_helper=self.k8s_helper, logger=self.logger, ui_helper=self.ui_helper, state=self.state)
