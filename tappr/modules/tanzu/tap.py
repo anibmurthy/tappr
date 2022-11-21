@@ -380,16 +380,16 @@ class TanzuApplicationPlatform:
         if exit_code != 0:
             raise typer.Exit(-1)
 
-        exit_code = self.sh_call(
-            cmd=f"kubectl config set-context --current --namespace={namespace}",
-            msg=f":sunglasses: Setting namespace {namespace} as default in current context",
-            spinner_msg="Finalizing",
-            error_msg=":broken_heart: Unable to set namespace as default. Use [bold]--verbose[/bold] flag for error details.",
-        )
-        if exit_code != 0:
-            raise typer.Exit(-1)
-
         if not quiet:
+            exit_code = self.sh_call(
+                cmd=f"kubectl config set-context --current --namespace={namespace}",
+                msg=f":sunglasses: Setting namespace {namespace} as default in current context",
+                spinner_msg="Finalizing",
+                error_msg=":broken_heart: Unable to set namespace as default. Use [bold]--verbose[/bold] flag for error details.",
+            )
+            if exit_code != 0:
+                raise typer.Exit(-1)
+
             if_add_test_template = self.logger.confirm(":test_tube: Do you want to add a test pipeline?", default=False)
             if if_add_test_template:
                 # {$$testTaskImage}

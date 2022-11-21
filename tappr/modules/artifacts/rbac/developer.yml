@@ -98,6 +98,14 @@ type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: e30K
 ---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: registry-tls-secret
+  namespace: {$$namespace}
+spec:
+  fromNamespace: tap-source-storage
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -153,14 +161,6 @@ roleRef:
   kind: ClusterRole
   name: k8s-reader
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: secretgen.carvel.dev/v1alpha1
-kind: SecretImport
-metadata:
-  name: registry-tls-secret
-  namespace: {$$namespace}
-spec:
-  fromNamespace: tap-source-storage
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
