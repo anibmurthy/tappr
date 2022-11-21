@@ -175,11 +175,3 @@ roleRef:
  kind: ClusterRole
  name: oci-role
  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: secretgen.carvel.dev/v1alpha1
-kind: SecretImport
-metadata:
-  name: registry-tls-secret
-  namespace: {$$namespace}
-spec:
-  fromNamespace: tap-source-storage

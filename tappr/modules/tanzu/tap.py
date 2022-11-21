@@ -380,6 +380,20 @@ class TanzuApplicationPlatform:
         if exit_code != 0:
             raise typer.Exit(-1)
 
+        dev_yaml_path = os.path.dirname(os.path.abspath(__file__)).replace("/modules/tanzu", "") + f"/modules/artifacts/rbac/secret.yml"
+        hash_str = str(time.time())
+        tmp_dir = f"/tmp/{hashlib.md5(hash_str.encode()).hexdigest()}"
+        open(tmp_dir, "w").write(open(dev_yaml_path, "r").read().replace("{$$namespace}", namespace))
+
+        exit_code = self.sh_call(
+            cmd=f"kubectl -n {namespace} apply -f {tmp_dir}",
+            msg=f":sunglasses: Creating SecretImport resource in developer namespace {namespace}",
+            spinner_msg="Finalizing",
+            error_msg=":broken_heart: Unable to create SecreImport in developer namespace. Use [bold]--verbose[/bold] flag for error details.",
+        )
+        if exit_code != 0:
+            raise typer.Exit(-1)
+
         if not quiet:
             exit_code = self.sh_call(
                 cmd=f"kubectl config set-context --current --namespace={namespace}",
